@@ -9,6 +9,7 @@ interface Question {
   correctAnswer: number;
   score: number;
   isWrong: boolean;
+  hasInfoError: boolean;
 }
 
 const HISTORY_TOPICS = [
@@ -55,6 +56,8 @@ export default function QuestionsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTopic, setSelectedTopic] = useState(HISTORY_TOPICS[0].id);
   const [lastGenerated, setLastGenerated] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
 
   const fetchQuestions = async () => {
@@ -95,7 +98,7 @@ export default function QuestionsPage() {
     }
   };
 
-  const handleWrongQuestion = async (questionId: string, isWrong: boolean) => {
+  const handleAnswerError = async (questionId: string, isWrong: boolean) => {
     try {
       await fetch(`/api/questions/${questionId}`, {
         method: "PATCH",
@@ -109,7 +112,25 @@ export default function QuestionsPage() {
         questions.map((q) => (q.id === questionId ? { ...q, isWrong } : q))
       );
     } catch (error) {
-      console.error("Error updating question status:", error);
+      console.error("Error updating answer error status:", error);
+    }
+  };
+
+  const handleInfoError = async (questionId: string, hasInfoError: boolean) => {
+    try {
+      await fetch(`/api/questions/${questionId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ hasInfoError }),
+      });
+
+      setQuestions(
+        questions.map((q) => (q.id === questionId ? { ...q, hasInfoError } : q))
+      );
+    } catch (error) {
+      console.error("Error updating info error status:", error);
     }
   };
 
@@ -124,73 +145,189 @@ export default function QuestionsPage() {
     }
   };
 
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+      // Simulating an API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Show success modal
+      setShowSuccessModal(true);
+
+      // Hide modal after 2 seconds
+      setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Error saving changes:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   useEffect(() => {
     fetchQuestions();
-  }, []); // Only fetch on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50">
+        <svg
+          className="animate-spin h-12 w-12 text-white"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          ></path>
+        </svg>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-semibold text-gray-800">
-              Soru Üretici
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-gray-100">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header Section */}
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-white/5 rounded-lg p-6 shadow-md">
+          <div>
+            <h1 className="text-3xl font-bold text-white">
+              <span className="text-blue-400">Soru Üretici</span> Sistemi
             </h1>
-            <button
-              onClick={handleLogout}
-              className="text-red-600 hover:text-red-800 font-medium"
+            <p className="text-gray-400 mt-2">
+              Tarih dersi için örnek soru üretme arayüzü
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="mt-4 md:mt-0 px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors duration-200 flex items-center gap-2"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              Çıkış Yap
-            </button>
-          </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+            Çıkış
+          </button>
+        </header>
 
-          <div className="space-y-4 mb-8">
-            <div className="flex items-center space-x-4">
-              <select
-                value={selectedTopic}
-                onChange={(e) => setSelectedTopic(e.target.value)}
-                className="flex-1 p-2 border border-gray-200 rounded-md text-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        {/* Controls Section */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8 bg-white/5 p-6 rounded-lg shadow-md">
+          <div className="relative flex-1 w-full">
+            <label htmlFor="topic-select" className="sr-only">
+              Seçili Konu
+            </label>
+            <select
+              id="topic-select"
+              value={selectedTopic}
+              onChange={(e) => setSelectedTopic(e.target.value)}
+              className="w-full min-w-[300px] sm:min-w-[400px] lg:min-w-[500px] px-4 py-3 bg-gray-800 rounded-md text-gray-200 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300"
+            >
+              {HISTORY_TOPICS.map((topic) => (
+                <option key={topic.id} value={topic.id} className="py-2">
+                  {topic.name}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                {HISTORY_TOPICS.map((topic) => (
-                  <option key={topic.id} value={topic.id}>
-                    {topic.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={fetchQuestions}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium"
-              >
-                Yeni Sorular Üret
-              </button>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
             </div>
-            {lastGenerated && (
-              <p className="text-sm text-gray-500">
-                Son üretilen: {lastGenerated}
-              </p>
-            )}
           </div>
-
-          <div className="space-y-6">
-            {questions.map((question, index) => (
-              <div
-                key={question.id}
-                className="border border-gray-100 rounded-lg p-6 hover:border-gray-200 transition-colors"
+          <button
+            onClick={fetchQuestions}
+            className="px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-700 transition-colors duration-200 text-white flex items-center gap-2"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            Yeni Sorular Üret
+          </button>
+          {lastGenerated && (
+            <div className="text-gray-400 flex items-center gap-1 text-sm">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-800">
-                    Soru {index + 1}
-                  </h3>
-                  <div className="flex items-center space-x-4">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Son üretilen konu:{" "}
+              <span className="text-gray-200">{lastGenerated}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Questions Section */}
+        <div className="space-y-6">
+          {questions.map((question, index) => (
+            <div
+              key={question.id}
+              className="bg-gray-800/50 hover:bg-gray-800 transition-colors duration-200 rounded-lg p-6 shadow-md"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-white flex items-center gap-2 mb-4 sm:mb-0">
+                  <span className="inline-block px-2 py-1 bg-blue-600 text-white rounded-md">
+                    #{index + 1}
+                  </span>
+                  {question.question}
+                </h3>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center space-x-2 bg-gray-900 rounded-md px-3 py-2">
+                    <label
+                      htmlFor={`score-${question.id}`}
+                      className="text-sm text-gray-400"
+                    >
+                      Puan:
+                    </label>
                     <input
+                      id={`score-${question.id}`}
                       type="number"
                       min="1"
                       max="5"
@@ -198,41 +335,133 @@ export default function QuestionsPage() {
                       onChange={(e) =>
                         handleScoreChange(question.id, parseInt(e.target.value))
                       }
-                      className="w-16 p-1 border border-gray-200 rounded text-center"
+                      className="w-14 bg-transparent text-center text-gray-200 border-b border-gray-600 focus:outline-none"
                     />
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={question.isWrong}
-                        onChange={(e) =>
-                          handleWrongQuestion(question.id, e.target.checked)
-                        }
-                        className="rounded text-blue-500 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-600">Hatalı</span>
-                    </label>
+                    <span className="text-sm text-gray-400">/ 5</span>
                   </div>
-                </div>
-                <p className="text-gray-600 mb-4">{question.question}</p>
-                <div className="space-y-2">
-                  {question.answers.map((answer, ansIndex) => (
-                    <div
-                      key={ansIndex}
-                      className={`p-3 rounded-md ${
-                        ansIndex === question.correctAnswer
-                          ? "bg-green-50 border border-green-100 text-green-700"
-                          : "bg-gray-50 border border-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {answer}
-                    </div>
-                  ))}
+                  <label className="flex items-center cursor-pointer bg-gray-900 rounded-md px-3 py-2 hover:bg-gray-700 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={question.isWrong}
+                      onChange={(e) =>
+                        handleAnswerError(question.id, e.target.checked)
+                      }
+                      className="rounded text-red-500 focus:ring-offset-gray-800 focus:ring-red-500 mr-2"
+                    />
+                    <span className="text-sm text-gray-200">
+                      Doğru Cevap Hatalı
+                    </span>
+                  </label>
+                  <label className="flex items-center cursor-pointer bg-gray-900 rounded-md px-3 py-2 hover:bg-gray-700 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={question.hasInfoError || false}
+                      onChange={(e) =>
+                        handleInfoError(question.id, e.target.checked)
+                      }
+                      className="rounded text-red-500 focus:ring-offset-gray-800 focus:ring-red-500 mr-2"
+                    />
+                    <span className="text-sm text-gray-200">
+                      Soruda Bilgi Yanlışı var
+                    </span>
+                  </label>
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="grid grid-cols-1 gap-2">
+                {question.answers.map((answer, ansIndex) => {
+                  const isCorrect = ansIndex === question.correctAnswer;
+                  return (
+                    <div
+                      key={ansIndex}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-md text-gray-300 transition-colors ${
+                        isCorrect
+                          ? "bg-green-700/20 border border-green-600 text-green-300"
+                          : "bg-gray-700/50 hover:bg-gray-700"
+                      }`}
+                    >
+                      <span className="w-6 h-6 flex items-center justify-center bg-white/10 rounded-md text-sm font-bold">
+                        {String.fromCharCode(65 + ansIndex)}
+                      </span>
+                      <span>{answer}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Save Button */}
+      <div className="fixed bottom-8 right-8">
+        <button
+          onClick={handleSaveChanges}
+          disabled={isSaving}
+          className="px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium shadow-lg flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSaving ? (
+            <>
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                ></path>
+              </svg>
+              Kaydediliyor...
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Tüm Sorular Kontrol Edildi
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 transform transition-all ease-out duration-300">
+            <div className="flex items-center gap-3 text-gray-900">
+              <svg
+                className="w-6 h-6 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              <span className="text-lg font-medium">Cevaplar kaydedildi</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

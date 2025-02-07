@@ -9,7 +9,6 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -22,42 +21,48 @@ export default function LoginPage() {
       if (response.ok) {
         router.push("/questions");
       } else {
-        setError("Invalid password");
+        setError("Geçersiz şifre");
       }
     } catch (err) {
-      setError("Something went wrong");
+      setError("Bir hata oluştu");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h1 className="text-2xl font-bold mb-6 text-center">Quiz App Login</h1>
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="Enter password"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            Login
-          </button>
-        </form>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="w-full max-w-md p-8 space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-gray-900">Soru</h1>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-lg p-8 space-y-6">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Şifre
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="••••••••"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-medium"
+            >
+              Giriş Yap
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
