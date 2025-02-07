@@ -11,22 +11,65 @@ interface Question {
   isWrong: boolean;
 }
 
+const HISTORY_TOPICS = [
+  {
+    id: "anadolu_selcuklu",
+    name: "Anadolu Selçuklu Devleti ve Türkiye Tarihi",
+  },
+  {
+    id: "beylikten_devlete",
+    name: "Beylikten Devlete Osmanlı",
+  },
+  {
+    id: "degisen_dunya",
+    name: "Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti",
+  },
+  {
+    id: "degisim_cagi",
+    name: "Değişim Çağında Osmanlı Devleti",
+  },
+  {
+    id: "deka_dunya",
+    name: "Deka Dünya Gücü Osmanlı",
+  },
+  {
+    id: "ilk_cag",
+    name: "İlk Çağ Uygarlıkları",
+  },
+  {
+    id: "turk_dunyasi",
+    name: "İlk ve Orta Çağlarda Türk Dünyası",
+  },
+  {
+    id: "islam_medeniyeti",
+    name: "İslam Medeniyetinin Doğuşu",
+  },
+  {
+    id: "turk_islam",
+    name: "Türk İslam Tarihi",
+  },
+];
+
 export default function QuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState("math");
+  const [selectedTopic, setSelectedTopic] = useState(HISTORY_TOPICS[0].id);
+  const [lastGenerated, setLastGenerated] = useState("");
   const router = useRouter();
 
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/questions?category=${category}`);
+      const response = await fetch(`/api/questions?category=${selectedTopic}`);
       if (response.status === 401) {
         router.push("/");
         return;
       }
       const data = await response.json();
       setQuestions(data);
+      setLastGenerated(
+        HISTORY_TOPICS.find((t) => t.id === selectedTopic)?.name || ""
+      );
     } catch (error) {
       console.error("Error fetching questions:", error);
       router.push("/");
@@ -83,88 +126,112 @@ export default function QuestionsPage() {
 
   useEffect(() => {
     fetchQuestions();
-  }, [category]);
+  }, []); // Only fetch on mount
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="block p-2 border rounded"
-        >
-          <option value="math">Mathematics</option>
-          <option value="science">Science</option>
-          <option value="history">History</option>
-        </select>
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-        >
-          Logout
-        </button>
-      </div>
-
-      <div className="space-y-6">
-        {questions.map((question, index) => (
-          <div key={question.id} className="border p-4 rounded shadow">
-            <h3 className="text-lg font-bold mb-2">
-              Question {index + 1}: {question.question}
-            </h3>
-            <div className="space-y-2">
-              {question.answers.map((answer, ansIndex) => (
-                <div
-                  key={ansIndex}
-                  className={`p-2 rounded ${
-                    ansIndex === question.correctAnswer
-                      ? "bg-green-100 border-green-500"
-                      : "bg-gray-100"
-                  }`}
-                >
-                  {answer}
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex items-center space-x-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Score (1-5):
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={question.score || 1}
-                  onChange={(e) =>
-                    handleScoreChange(question.id, parseInt(e.target.value))
-                  }
-                  className="mt-1 block w-20 rounded-md border-gray-300 shadow-sm"
-                />
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={question.isWrong}
-                  onChange={(e) =>
-                    handleWrongQuestion(question.id, e.target.checked)
-                  }
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label className="ml-2 block text-sm text-gray-900">
-                  Soru/Cevap Yanlış
-                </label>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-2xl font-semibold text-gray-800">
+              Soru Üretici
+            </h1>
+            <button
+              onClick={handleLogout}
+              className="text-red-600 hover:text-red-800 font-medium"
+            >
+              Çıkış Yap
+            </button>
           </div>
-        ))}
+
+          <div className="space-y-4 mb-8">
+            <div className="flex items-center space-x-4">
+              <select
+                value={selectedTopic}
+                onChange={(e) => setSelectedTopic(e.target.value)}
+                className="flex-1 p-2 border border-gray-200 rounded-md text-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {HISTORY_TOPICS.map((topic) => (
+                  <option key={topic.id} value={topic.id}>
+                    {topic.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={fetchQuestions}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium"
+              >
+                Yeni Sorular Üret
+              </button>
+            </div>
+            {lastGenerated && (
+              <p className="text-sm text-gray-500">
+                Son üretilen: {lastGenerated}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            {questions.map((question, index) => (
+              <div
+                key={question.id}
+                className="border border-gray-100 rounded-lg p-6 hover:border-gray-200 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-800">
+                    Soru {index + 1}
+                  </h3>
+                  <div className="flex items-center space-x-4">
+                    <input
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={question.score || 1}
+                      onChange={(e) =>
+                        handleScoreChange(question.id, parseInt(e.target.value))
+                      }
+                      className="w-16 p-1 border border-gray-200 rounded text-center"
+                    />
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={question.isWrong}
+                        onChange={(e) =>
+                          handleWrongQuestion(question.id, e.target.checked)
+                        }
+                        className="rounded text-blue-500 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-600">Hatalı</span>
+                    </label>
+                  </div>
+                </div>
+                <p className="text-gray-600 mb-4">{question.question}</p>
+                <div className="space-y-2">
+                  {question.answers.map((answer, ansIndex) => (
+                    <div
+                      key={ansIndex}
+                      className={`p-3 rounded-md ${
+                        ansIndex === question.correctAnswer
+                          ? "bg-green-50 border border-green-100 text-green-700"
+                          : "bg-gray-50 border border-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {answer}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

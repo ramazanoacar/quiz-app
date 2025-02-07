@@ -4,16 +4,30 @@ import { cookies } from 'next/headers';
 // Dummy questions generator
 function generateDummyQuestions(category: string) {
   const questions = [];
+  const topics = {
+    anadolu_selcuklu: "Anadolu Selçuklu",
+    beylikten_devlete: "Osmanlı Kuruluş",
+    degisen_dunya: "Osmanlı Siyaseti",
+    degisim_cagi: "Osmanlı Modernleşme",
+    deka_dunya: "Osmanlı Dünya Gücü",
+    ilk_cag: "İlk Çağ",
+    turk_dunyasi: "Türk Dünyası",
+    islam_medeniyeti: "İslam Medeniyeti",
+    turk_islam: "Türk İslam"
+  };
+
+  const topicName = topics[category as keyof typeof topics] || category;
+
   for (let i = 0; i < 10; i++) {
     questions.push({
       id: `q${i}`,
-      question: `Sample ${category} question ${i + 1}?`,
+      question: `${topicName} konusu ile ilgili örnek soru ${i + 1}?`,
       answers: [
-        `Answer option A for question ${i + 1}`,
-        `Answer option B for question ${i + 1}`,
-        `Answer option C for question ${i + 1}`,
-        `Answer option D for question ${i + 1}`,
-        `Answer option E for question ${i + 1}`,
+        `${topicName} - Cevap A örneği ${i + 1}`,
+        `${topicName} - Cevap B örneği ${i + 1}`,
+        `${topicName} - Cevap C örneği ${i + 1}`,
+        `${topicName} - Cevap D örneği ${i + 1}`,
+        `${topicName} - Cevap E örneği ${i + 1}`,
       ],
       correctAnswer: Math.floor(Math.random() * 5),
       score: 1,
