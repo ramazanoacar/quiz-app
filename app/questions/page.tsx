@@ -29,6 +29,7 @@ export default function QuestionsPage() {
       setQuestions(data);
     } catch (error) {
       console.error("Error fetching questions:", error);
+      router.push("/");
     }
     setLoading(false);
   };
@@ -69,6 +70,17 @@ export default function QuestionsPage() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+      router.push("/");
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
+
   useEffect(() => {
     fetchQuestions();
   }, [category]);
@@ -83,21 +95,21 @@ export default function QuestionsPage() {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="mb-6">
+      <div className="flex justify-between items-center mb-6">
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="block w-full p-2 border rounded"
+          className="block p-2 border rounded"
         >
           <option value="math">Mathematics</option>
           <option value="science">Science</option>
           <option value="history">History</option>
         </select>
         <button
-          onClick={fetchQuestions}
-          className="mt-2 bg-blue-500 text-white px-4 py-2 rounded"
+          onClick={handleLogout}
+          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
         >
-          Generate Questions
+          Logout
         </button>
       </div>
 

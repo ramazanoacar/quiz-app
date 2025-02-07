@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 // Dummy questions generator
 function generateDummyQuestions(category: string) {
@@ -23,6 +24,17 @@ function generateDummyQuestions(category: string) {
 }
 
 export async function GET(request: Request) {
+  // Check authentication
+  const cookieStore = cookies();
+  const authCookie = cookieStore.get('auth');
+
+  if (!authCookie || authCookie.value !== 'true') {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const category = searchParams.get('category') || 'math';
 
@@ -30,6 +42,9 @@ export async function GET(request: Request) {
     const questions = generateDummyQuestions(category);
     return NextResponse.json(questions);
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 } 

@@ -8,7 +8,8 @@ const nextConfig = {
   },
   typescript: {
     ignoreBuildErrors: false
-  }
+  },
+  distDir: '.next'
 }
 
 module.exports = nextConfig 
