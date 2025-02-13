@@ -21,4 +21,5 @@ model Question {
   isWrong      Boolean  @default(false)
   category     String
   checked      Boolean  @default(false)
+  updated      Boolean  @default(false)
 } 

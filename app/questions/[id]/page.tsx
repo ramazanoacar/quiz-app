@@ -27,6 +27,7 @@ export default function QuestionDetailPage({
   const [preferredQuestion, setPreferredQuestion] = useState("");
   const [preferredAnswers, setPreferredAnswers] = useState<string[]>([]);
   const [preferredCorrectAnswer, setPreferredCorrectAnswer] = useState(-1);
+  const [hasChanges, setHasChanges] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -61,6 +62,28 @@ export default function QuestionDetailPage({
     fetchQuestion();
   }, [params.id, router]);
 
+  // Check for changes in preferred values
+  useEffect(() => {
+    if (question) {
+      const isUpdated =
+        preferredQuestion !== question.question ||
+        preferredAnswers.some(
+          (answer, index) => answer !== question.answers[index]
+        ) ||
+        preferredCorrectAnswer !== question.correctAnswer;
+
+      setHasChanges(isUpdated);
+    }
+  }, [preferredQuestion, preferredAnswers, preferredCorrectAnswer, question]);
+
+  const handleScoreChange = (score: number) => {
+    setQuestion(question ? { ...question, score } : null);
+  };
+
+  const handleWrongAnswerToggle = (isWrong: boolean) => {
+    setQuestion(question ? { ...question, isWrong } : null);
+  };
+
   const handleMarkAsChecked = async () => {
     try {
       await fetch(`/api/questions/${params.id}`, {
@@ -73,6 +96,9 @@ export default function QuestionDetailPage({
           preferredQuestion,
           preferredAnswers,
           preferredCorrectAnswer,
+          score: question?.score,
+          isWrong: question?.isWrong,
+          updated: hasChanges,
         }),
       });
       router.push("/questions");
@@ -131,6 +157,42 @@ export default function QuestionDetailPage({
             <div className="bg-gray-700/50 p-4 rounded-lg">
               <h2 className="text-lg font-semibold mb-2">Özel Bilgi</h2>
               <p className="text-gray-300">{question.information}</p>
+            </div>
+
+            <div className="bg-gray-700/50 p-4 rounded-lg">
+              <h2 className="text-lg font-semibold mb-4">
+                Soru Değerlendirmesi
+              </h2>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <label className="text-gray-300">Puan:</label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button
+                        key={value}
+                        onClick={() => handleScoreChange(value)}
+                        className={`w-10 h-10 rounded-md flex items-center justify-center transition-colors ${
+                          question?.score === value
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                        }`}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3 text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={question?.isWrong || false}
+                    onChange={(e) => handleWrongAnswerToggle(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 bg-gray-800 border-gray-600 focus:ring-blue-500"
+                  />
+                  Yanlış Soru
+                </label>
+              </div>
             </div>
 
             <div className="bg-gray-700/50 p-4 rounded-lg">
