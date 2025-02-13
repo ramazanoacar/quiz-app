@@ -9,10 +9,16 @@ datasource db {
 
 model Question {
   id            String   @id @default(cuid())
+  context       String @default("")
+  information   String @default("")
   question      String
   answers       String[]
   correctAnswer Int
+  preferredQuestion String @default("")
+  preferredAnswers  String[] @default([])
+  preferredCorrectAnswer Int @default(-1)
   score        Int      @default(0)
   isWrong      Boolean  @default(false)
   category     String
+  checked      Boolean  @default(false)
 } 

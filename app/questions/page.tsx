@@ -56,8 +56,6 @@ export default function QuestionsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTopic, setSelectedTopic] = useState(HISTORY_TOPICS[0].id);
   const [lastGenerated, setLastGenerated] = useState("");
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
 
   const fetchQuestions = async () => {
@@ -76,6 +74,30 @@ export default function QuestionsPage() {
     } catch (error) {
       console.error("Error fetching questions:", error);
       router.push("/");
+    }
+    setLoading(false);
+  };
+
+  const generateNewQuestions = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/questions?category=${selectedTopic}`, {
+        method: "POST",
+      });
+
+      if (response.status === 401) {
+        router.push("/");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to generate questions");
+      }
+
+      // Fetch the newly generated questions
+      await fetchQuestions();
+    } catch (error) {
+      console.error("Error generating questions:", error);
     }
     setLoading(false);
   };
@@ -145,30 +167,14 @@ export default function QuestionsPage() {
     }
   };
 
-  const handleSaveChanges = async () => {
-    setIsSaving(true);
-    try {
-      // Simulating an API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Show success modal
-      setShowSuccessModal(true);
-
-      // Hide modal after 2 seconds
-      setTimeout(() => {
-        setShowSuccessModal(false);
-      }, 2000);
-    } catch (error) {
-      console.error("Error saving changes:", error);
-    } finally {
-      setIsSaving(false);
-    }
+  const handleCheckQuestion = (questionId: string) => {
+    router.push(`/questions/${questionId}`);
   };
 
   useEffect(() => {
     fetchQuestions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedTopic]);
 
   if (loading) {
     return (
@@ -265,7 +271,7 @@ export default function QuestionsPage() {
             </div>
           </div>
           <button
-            onClick={fetchQuestions}
+            onClick={generateNewQuestions}
             className="px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-700 transition-colors duration-200 text-white flex items-center gap-2"
           >
             <svg
@@ -319,52 +325,25 @@ export default function QuestionsPage() {
                   {question.question}
                 </h3>
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center space-x-2 bg-gray-900 rounded-md px-3 py-2">
-                    <label
-                      htmlFor={`score-${question.id}`}
-                      className="text-sm text-gray-400"
+                  <button
+                    onClick={() => handleCheckQuestion(question.id)}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      Puan:
-                    </label>
-                    <input
-                      id={`score-${question.id}`}
-                      type="number"
-                      min="1"
-                      max="5"
-                      value={question.score || 1}
-                      onChange={(e) =>
-                        handleScoreChange(question.id, parseInt(e.target.value))
-                      }
-                      className="w-14 bg-transparent text-center text-gray-200 border-b border-gray-600 focus:outline-none"
-                    />
-                    <span className="text-sm text-gray-400">/ 5</span>
-                  </div>
-                  <label className="flex items-center cursor-pointer bg-gray-900 rounded-md px-3 py-2 hover:bg-gray-700 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={question.isWrong}
-                      onChange={(e) =>
-                        handleAnswerError(question.id, e.target.checked)
-                      }
-                      className="rounded text-red-500 focus:ring-offset-gray-800 focus:ring-red-500 mr-2"
-                    />
-                    <span className="text-sm text-gray-200">
-                      Doğru Cevap Hatalı
-                    </span>
-                  </label>
-                  <label className="flex items-center cursor-pointer bg-gray-900 rounded-md px-3 py-2 hover:bg-gray-700 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={question.hasInfoError || false}
-                      onChange={(e) =>
-                        handleInfoError(question.id, e.target.checked)
-                      }
-                      className="rounded text-red-500 focus:ring-offset-gray-800 focus:ring-red-500 mr-2"
-                    />
-                    <span className="text-sm text-gray-200">
-                      Soruda Bilgi Yanlışı var
-                    </span>
-                  </label>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                      />
+                    </svg>
+                    Kontrol Et
+                  </button>
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-2">
@@ -391,77 +370,6 @@ export default function QuestionsPage() {
           ))}
         </div>
       </div>
-
-      {/* Save Button */}
-      <div className="fixed bottom-8 right-8">
-        <button
-          onClick={handleSaveChanges}
-          disabled={isSaving}
-          className="px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium shadow-lg flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSaving ? (
-            <>
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                ></path>
-              </svg>
-              Kaydediliyor...
-            </>
-          ) : (
-            <>
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Tüm Sorular Kontrol Edildi
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 transform transition-all ease-out duration-300">
-            <div className="flex items-center gap-3 text-gray-900">
-              <svg
-                className="w-6 h-6 text-green-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span className="text-lg font-medium">Cevaplar kaydedildi</span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

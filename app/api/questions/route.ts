@@ -1,5 +1,8 @@
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 // Dummy questions generator
 function generateDummyQuestions(category: string) {
@@ -13,25 +16,33 @@ function generateDummyQuestions(category: string) {
     ilk_cag: "İlk Çağ",
     turk_dunyasi: "Türk Dünyası",
     islam_medeniyeti: "İslam Medeniyeti",
-    turk_islam: "Türk İslam"
+    turk_islam: "Türk İslam",
   };
 
   const topicName = topics[category as keyof typeof topics] || category;
 
   for (let i = 0; i < 10; i++) {
+    const question = `${topicName} konusu ile ilgili örnek soru ${i + 1}?`;
+    const answers = [
+      `${topicName} - Cevap A örneği ${i + 1}`,
+      `${topicName} - Cevap B örneği ${i + 1}`,
+      `${topicName} - Cevap C örneği ${i + 1}`,
+      `${topicName} - Cevap D örneği ${i + 1}`,
+      `${topicName} - Cevap E örneği ${i + 1}`,
+    ];
+    const correctAnswer = Math.floor(Math.random() * 5);
+
     questions.push({
-      id: `q${i}`,
-      question: `${topicName} konusu ile ilgili örnek soru ${i + 1}?`,
-      answers: [
-        `${topicName} - Cevap A örneği ${i + 1}`,
-        `${topicName} - Cevap B örneği ${i + 1}`,
-        `${topicName} - Cevap C örneği ${i + 1}`,
-        `${topicName} - Cevap D örneği ${i + 1}`,
-        `${topicName} - Cevap E örneği ${i + 1}`,
-      ],
-      correctAnswer: Math.floor(Math.random() * 5),
+      context: `${topicName} konusu ile ilgili genel bilgi`,
+      information: `${topicName} konusu ile ilgili özel bilgi`,
+      question,
+      answers,
+      correctAnswer,
+      preferredQuestion: question,
+      preferredAnswers: answers,
+      preferredCorrectAnswer: correctAnswer,
       score: 1,
-      isWrong: false,
+      category: category,
     });
   }
   return questions;
@@ -40,25 +51,76 @@ function generateDummyQuestions(category: string) {
 export async function GET(request: Request) {
   // Check authentication
   const cookieStore = cookies();
-  const authCookie = cookieStore.get('auth');
+  const authCookie = cookieStore.get("auth");
 
-  if (!authCookie || authCookie.value !== 'true') {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  if (!authCookie || authCookie.value !== "true") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
-  const category = searchParams.get('category') || 'math';
+  const category = searchParams.get("category");
+
+  if (!category) {
+    return NextResponse.json(
+      { error: "Category is required" },
+      { status: 400 }
+    );
+  }
 
   try {
-    const questions = generateDummyQuestions(category);
+    const questions = await prisma.question.findMany({
+      where: {
+        category: category,
+        checked: false,
+      },
+    });
     return NextResponse.json(questions);
   } catch (error) {
+    console.error("Database error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
-} 
+}
+
+export async function POST(request: Request) {
+  // Check authentication
+  const cookieStore = cookies();
+  const authCookie = cookieStore.get("auth");
+
+  if (!authCookie || authCookie.value !== "true") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const category = searchParams.get("category");
+
+  if (!category) {
+    return NextResponse.json(
+      { error: "Category is required" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const newQuestions = generateDummyQuestions(category);
+    const createdQuestions = await prisma.question.createMany({
+      data: newQuestions.map((q) => ({
+        ...q,
+        checked: false,
+      })),
+    });
+
+    return NextResponse.json({
+      message: "Questions generated successfully",
+      count: createdQuestions.count,
+    });
+  } catch (error) {
+    console.error("Database error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
