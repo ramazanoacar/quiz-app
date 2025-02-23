@@ -1,40 +1,26 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { PrismaClient } from "@prisma/client";
+import { generateQuestions } from "@/lib/questionGenerator";
 
 const prisma = new PrismaClient();
 
-// Dummy questions generator
-function generateDummyQuestions(category: string) {
+function generateDummyQuestions(category: string, contexts: string[]) {
   const questions = [];
-  const topics = {
-    anadolu_selcuklu: "Anadolu Selçuklu",
-    beylikten_devlete: "Osmanlı Kuruluş",
-    degisen_dunya: "Osmanlı Siyaseti",
-    degisim_cagi: "Osmanlı Modernleşme",
-    deka_dunya: "Osmanlı Dünya Gücü",
-    ilk_cag: "İlk Çağ",
-    turk_dunyasi: "Türk Dünyası",
-    islam_medeniyeti: "İslam Medeniyeti",
-    turk_islam: "Türk İslam",
-  };
-
-  const topicName = topics[category as keyof typeof topics] || category;
-
   for (let i = 0; i < 10; i++) {
-    const question = `${topicName} konusu ile ilgili örnek soru ${i + 1}?`;
+    const question = `${contexts[i]} konusu ile ilgili örnek soru ${i + 1}?`;
     const answers = [
-      `${topicName} - Cevap A örneği ${i + 1}`,
-      `${topicName} - Cevap B örneği ${i + 1}`,
-      `${topicName} - Cevap C örneği ${i + 1}`,
-      `${topicName} - Cevap D örneği ${i + 1}`,
-      `${topicName} - Cevap E örneği ${i + 1}`,
+      `${contexts[i]} - Cevap A örneği ${i + 1}`,
+      `${contexts[i]} - Cevap B örneği ${i + 1}`,
+      `${contexts[i]} - Cevap C örneği ${i + 1}`,
+      `${contexts[i]} - Cevap D örneği ${i + 1}`,
+      `${contexts[i]} - Cevap E örneği ${i + 1}`,
     ];
     const correctAnswer = Math.floor(Math.random() * 5);
 
     questions.push({
-      context: `${topicName} konusu ile ilgili genel bilgi`,
-      information: `${topicName} konusu ile ilgili özel bilgi`,
+      context: contexts[i],
+      information: contexts[i],
       question,
       answers,
       correctAnswer,
@@ -49,7 +35,6 @@ function generateDummyQuestions(category: string) {
 }
 
 export async function GET(request: Request) {
-  // Check authentication
   const cookieStore = cookies();
   const authCookie = cookieStore.get("auth");
 
@@ -85,7 +70,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  // Check authentication
   const cookieStore = cookies();
   const authCookie = cookieStore.get("auth");
 
@@ -95,6 +79,9 @@ export async function POST(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
+  const body = await request.json();
+  const contexts =
+    body.contexts || [...Array(5).keys()].map((i) => `Bağlam ${i + 1}`);
 
   if (!category) {
     return NextResponse.json(
@@ -104,13 +91,44 @@ export async function POST(request: Request) {
   }
 
   try {
-    const newQuestions = generateDummyQuestions(category);
+    const result = await generateQuestions({
+      numberOfQuestions: contexts.length * 2, // Generate 2 questions per context
+      context: contexts.join("\n-----SPLIT-----\n"),
+      overlap: 2,
+      printQuestions: process.env.NODE_ENV === "development",
+    });
+
     const createdQuestions = await prisma.question.createMany({
-      data: newQuestions.map((q) => ({
-        ...q,
+      data: result.questions.map((q, i) => ({
+        context: contexts[Math.floor(i / 2)], // Associate each question with its context
+        information: contexts[Math.floor(i / 2)],
+        question: q.question,
+        answers: [
+          q.correct_answer,
+          "Option B",
+          "Option C",
+          "Option D",
+          "Option E",
+        ],
+        correctAnswer: 0, // Correct answer is always the first one
+        preferredQuestion: q.question,
+        preferredAnswers: [
+          q.correct_answer,
+          "Option B",
+          "Option C",
+          "Option D",
+          "Option E",
+        ],
+        preferredCorrectAnswer: 0,
+        score: 1,
+        category: category,
         checked: false,
       })),
     });
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("Generation stats:", result.stats);
+    }
 
     return NextResponse.json({
       message: "Questions generated successfully",

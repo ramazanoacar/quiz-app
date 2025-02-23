@@ -205,7 +205,7 @@ export default function QuestionsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-gray-100">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header Section */}
+        {/* Updated Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-white/5 rounded-lg p-6 shadow-md">
           <div>
             <h1 className="text-3xl font-bold text-white">
@@ -215,28 +215,49 @@ export default function QuestionsPage() {
               Tarih dersi için örnek soru üretme arayüzü
             </p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="mt-4 md:mt-0 px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors duration-200 flex items-center gap-2"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex gap-4 mt-4 md:mt-0">
+            <button
+              onClick={() => router.push("/create")}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-            Çıkış
-          </button>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              Yeni Oluştur
+            </button>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors duration-200 flex items-center gap-2"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              Çıkış
+            </button>
+          </div>
         </header>
 
-        {/* Controls Section */}
+        {/* Remove the "Yeni Sorular Üret" button from Controls Section */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8 bg-white/5 p-6 rounded-lg shadow-md">
           <div className="relative flex-1 w-full">
             <label htmlFor="topic-select" className="sr-only">
@@ -270,44 +291,6 @@ export default function QuestionsPage() {
               </svg>
             </div>
           </div>
-          <button
-            onClick={generateNewQuestions}
-            className="px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-700 transition-colors duration-200 text-white flex items-center gap-2"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            Yeni Sorular Üret
-          </button>
-          {lastGenerated && (
-            <div className="text-gray-400 flex items-center gap-1 text-sm">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Son üretilen konu:{" "}
-              <span className="text-gray-200">{lastGenerated}</span>
-            </div>
-          )}
         </div>
 
         {/* Questions Section */}
