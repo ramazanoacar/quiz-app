@@ -22,4 +22,12 @@ model Question {
   category     String
   checked      Boolean  @default(false)
   updated      Boolean  @default(false)
+}
+
+model Information {
+  id        String   @id @default(cuid())
+  text      String
+  category  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 } 

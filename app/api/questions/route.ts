@@ -1,38 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { PrismaClient } from "@prisma/client";
-import { generateQuestions } from "@/lib/questionGenerator";
+import { generateQuestion } from "@/lib/questionGenerator";
 
 const prisma = new PrismaClient();
-
-function generateDummyQuestions(category: string, contexts: string[]) {
-  const questions = [];
-  for (let i = 0; i < 10; i++) {
-    const question = `${contexts[i]} konusu ile ilgili örnek soru ${i + 1}?`;
-    const answers = [
-      `${contexts[i]} - Cevap A örneği ${i + 1}`,
-      `${contexts[i]} - Cevap B örneği ${i + 1}`,
-      `${contexts[i]} - Cevap C örneği ${i + 1}`,
-      `${contexts[i]} - Cevap D örneği ${i + 1}`,
-      `${contexts[i]} - Cevap E örneği ${i + 1}`,
-    ];
-    const correctAnswer = Math.floor(Math.random() * 5);
-
-    questions.push({
-      context: contexts[i],
-      information: contexts[i],
-      question,
-      answers,
-      correctAnswer,
-      preferredQuestion: question,
-      preferredAnswers: answers,
-      preferredCorrectAnswer: correctAnswer,
-      score: 1,
-      category: category,
-    });
-  }
-  return questions;
-}
 
 export async function GET(request: Request) {
   const cookieStore = cookies();
@@ -80,7 +51,7 @@ export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
   const body = await request.json();
-  const contexts =
+  const contexts: string[] =
     body.contexts || [...Array(5).keys()].map((i) => `Bağlam ${i + 1}`);
 
   if (!category) {
@@ -91,16 +62,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await generateQuestions({
-      numberOfQuestions: contexts.length * 2, // Generate 2 questions per context
-      context: contexts.join("\n-----SPLIT-----\n"),
-      overlap: 2,
-      printQuestions: process.env.NODE_ENV === "development",
-    });
+    const result = await Promise.all(contexts.map(generateQuestion));
 
     const createdQuestions = await prisma.question.createMany({
-      data: result.questions.map((q, i) => ({
-        context: contexts[Math.floor(i / 2)], // Associate each question with its context
+      data: result.map((q, i) => ({
+        context: contexts[Math.floor(i / 2)],
         information: contexts[Math.floor(i / 2)],
         question: q.question,
         answers: [
@@ -110,7 +76,7 @@ export async function POST(request: Request) {
           "Option D",
           "Option E",
         ],
-        correctAnswer: 0, // Correct answer is always the first one
+        correctAnswer: 0,
         preferredQuestion: q.question,
         preferredAnswers: [
           q.correct_answer,
@@ -125,10 +91,6 @@ export async function POST(request: Request) {
         checked: false,
       })),
     });
-
-    if (process.env.NODE_ENV === "development") {
-      console.log("Generation stats:", result.stats);
-    }
 
     return NextResponse.json({
       message: "Questions generated successfully",

@@ -1,65 +1,33 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-const HISTORY_TOPICS = [
-  {
-    id: "anadolu_selcuklu",
-    name: "Anadolu Selçuklu Devleti ve Türkiye Tarihi",
-  },
-  {
-    id: "beylikten_devlete",
-    name: "Beylikten Devlete Osmanlı",
-  },
-  {
-    id: "degisen_dunya",
-    name: "Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti",
-  },
-  {
-    id: "degisim_cagi",
-    name: "Değişim Çağında Osmanlı Devleti",
-  },
-  {
-    id: "deka_dunya",
-    name: "Deka Dünya Gücü Osmanlı",
-  },
-  {
-    id: "ilk_cag",
-    name: "İlk Çağ Uygarlıkları",
-  },
-  {
-    id: "turk_dunyasi",
-    name: "İlk ve Orta Çağlarda Türk Dünyası",
-  },
-  {
-    id: "islam_medeniyeti",
-    name: "İslam Medeniyetinin Doğuşu",
-  },
-  {
-    id: "turk_islam",
-    name: "Türk İslam Tarihi",
-  },
-];
-
-const SAMPLE_CONTEXTS = {
-  anadolu_selcuklu: [
-    "Anadolu Selçuklu Devleti'nin kuruluşu ve gelişimi",
-    "Anadolu Selçuklu kültür ve medeniyeti",
-    "Anadolu Selçuklu ekonomik yapısı",
-  ],
-  beylikten_devlete: [
-    "Osmanlı Beyliği'nin kuruluşu",
-    "Osmanlı Devleti'nin yükselişi",
-    "İlk Osmanlı padişahları dönemi",
-  ],
-  // Add more contexts for other topics...
-};
+import { Information } from "@prisma/client";
+import { HISTORY_TOPICS } from "@/lib/topics";
 
 export default function CreateQuestionsPage() {
   const [selectedTopic, setSelectedTopic] = useState(HISTORY_TOPICS[0].id);
   const [selectedContexts, setSelectedContexts] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [availableContexts, setAvailableContexts] = useState<Information[]>([]);
+
+  useEffect(() => {
+    fetchContexts();
+  }, [selectedTopic]);
+
+  const fetchContexts = async () => {
+    try {
+      const response = await fetch(
+        `/api/informations?category=${selectedTopic}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableContexts(data);
+      }
+    } catch (error) {
+      console.error("Error fetching contexts:", error);
+    }
+  };
 
   const handleContextToggle = (context: string) => {
     setSelectedContexts((prev) => {
@@ -163,22 +131,20 @@ export default function CreateQuestionsPage() {
               </span>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {SAMPLE_CONTEXTS[
-                selectedTopic as keyof typeof SAMPLE_CONTEXTS
-              ]?.map((context, index) => (
+              {availableContexts.map((context) => (
                 <button
-                  key={index}
-                  onClick={() => handleContextToggle(context)}
+                  key={context.id}
+                  onClick={() => handleContextToggle(context.text)}
                   className={`p-4 rounded-lg text-left transition-colors duration-200 relative ${
-                    selectedContexts.includes(context)
+                    selectedContexts.includes(context.text)
                       ? "bg-blue-600 text-white"
                       : "bg-gray-800 hover:bg-gray-700 text-gray-300"
                   }`}
                 >
-                  {context}
-                  {selectedContexts.includes(context) && (
+                  {context.text}
+                  {selectedContexts.includes(context.text) && (
                     <span className="absolute top-2 right-2 bg-white text-blue-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                      {selectedContexts.indexOf(context) + 1}
+                      {selectedContexts.indexOf(context.text) + 1}
                     </span>
                   )}
                 </button>

@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
+import { SYSTEM_PROMPT } from "@/lib/prompts";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -13,21 +14,17 @@ const pinecone = new Pinecone({
 
 class ContextSplitter {
   private contexts: string[];
-  private index: number;
-  private overlap: number;
 
-  constructor(context: string, overlap: number = 2) {
+  constructor(context: string) {
     this.contexts = context.split("\n-----SPLIT-----\n").map((c) => c.trim());
-    this.index = 0;
-    this.overlap = overlap;
   }
 
   get length(): number {
-    return this.contexts.length - this.overlap;
+    return this.contexts.length;
   }
 
   getItem(index: number): string {
-    return this.contexts.slice(index, index + this.overlap + 1).join("\n");
+    return this.contexts[index];
   }
 }
 
@@ -63,93 +60,48 @@ async function questionToBatches(
   return queryResponse.matches.map((match) => match.metadata?.text as string);
 }
 
-export interface QuestionGeneratorOptions {
-  numberOfQuestions: number;
-  context: string;
-  overlap?: number;
-  printQuestions?: boolean;
-}
-
-export interface QuestionGeneratorResult {
-  questions: InformationQuestion[];
-  stats: {
-    inputTokens: number;
-    outputTokens: number;
-    costInput: number;
-    costOutput: number;
-    totalCost: number;
+export async function generateQuestion(
+  information: string
+): Promise<z.infer<typeof InformationQuestion>> {
+  const printQuestions = process.env.NODE_ENV === "development";
+  const question: z.infer<typeof InformationQuestion> = {
+    question: "",
+    correct_answer: "",
   };
-}
 
-export async function generateQuestions({
-  numberOfQuestions,
-  context,
-  overlap = 2,
-  printQuestions = false,
-}: QuestionGeneratorOptions): Promise<QuestionGeneratorResult> {
-  const systemPrompt = `You are a history teacher preparing questions for your students.
-Your task is to create challenging but fair questions based on the provided context.
-Make sure the questions test understanding rather than mere memorization.`;
+  try {
+    const contextBatches = await questionToBatches(information, 2);
+    const context = "CONTEXT:\n" + contextBatches.join("\n");
 
-  const contextSplitter = new ContextSplitter(context, overlap);
-  const questions: z.infer<typeof InformationQuestion>[] = [];
-  const messages: string[] = [];
-  let inputTokens = 0;
-  let outputTokens = 0;
-  const contextLength = contextSplitter.length;
+    const completion = await openai.beta.chat.completions.parse({
+      model: "ft:gpt-4o-2024-08-06:umstad::AvydhEM5",
+      messages: [
+        {
+          role: "system",
+          content: SYSTEM_PROMPT + "\n\n" + context,
+        },
+        {
+          role: "user",
+          content:
+            "Write a question using the summary, THIS IS THE IMPORTANT PART ASK SOMETHING FROM THIS, CONTEXT ABOVE IS JUSt HELPING: " +
+            information,
+        },
+      ],
+      response_format: zodResponseFormat(InformationQuestion, "question"),
+    });
 
-  for (let i = 0; i < numberOfQuestions; i++) {
-    try {
-      const contextIndex = Math.floor((i * contextLength) / numberOfQuestions);
-      const contextBatches = await questionToBatches(
-        contextSplitter.getItem(contextIndex),
-        2
-      );
-      const context = "CONTEXT:\n" + contextBatches.join("\n");
+    const message = completion.choices[0].message;
+    const parsed = message.parsed;
 
-      const completion = await openai.beta.chat.completions.parse({
-        model: "ft:gpt-4o-2024-08-06:umstad::AvydhEM5",
-        messages: [
-          { role: "system", content: systemPrompt + context },
-          {
-            role: "user",
-            content:
-              "Write a question using the summary, THIS IS THE IMPORTANT PART ASK SOMETHING FROM THIS, CONTEXT ABOVE IS JUSt HELPING: " +
-              contextSplitter.getItem(contextIndex),
-          },
-        ],
-        response_format: zodResponseFormat(InformationQuestion, "question"),
-      });
+    question.question = parsed.question;
+    question.correct_answer = parsed.correct_answer;
 
-      const message = completion.choices[0].message;
-      const parsed = message.parsed;
-
-      inputTokens += completion.usage?.prompt_tokens || 0;
-      outputTokens += completion.usage?.completion_tokens || 0;
-
-      questions.push(parsed);
-      messages.push(message.content);
-
-      if (printQuestions) {
-        console.log(parsed);
-      }
-    } catch (error) {
-      console.error("Error preparing question:", error);
-      console.error("Messages:", messages);
+    if (printQuestions) {
+      console.log(parsed);
     }
+  } catch (error) {
+    console.error("Error preparing question:", error);
   }
 
-  const costInput = (inputTokens * 0.15) / 1000000;
-  const costOutput = (outputTokens * 0.6) / 1000000;
-
-  return {
-    questions,
-    stats: {
-      inputTokens,
-      outputTokens,
-      costInput,
-      costOutput,
-      totalCost: costInput + costOutput,
-    },
-  };
+  return question;
 }
