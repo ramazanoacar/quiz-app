@@ -4,5 +4,25 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["fra1"]
-} 
+  "regions": ["fra1"],
+  "functions": {
+    "app/api/questions/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/questions/[id]/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/informations/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/informations/[id]/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/auth/login/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/auth/logout/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
