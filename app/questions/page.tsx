@@ -11,24 +11,33 @@ interface Question {
   score: number;
   isWrong: boolean;
   hasInfoError: boolean;
+  category: string;
+  addedAt: string;
 }
 
 export default function QuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTopic, setSelectedTopic] = useState(HISTORY_TOPICS[0].id);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(
+    HISTORY_TOPICS.map((topic) => topic.id)
+  );
   const router = useRouter();
 
   const fetchQuestions = async () => {
-    setLoading(true);
+    if (loading) setLoading(true);
     try {
-      const response = await fetch(`/api/questions?category=${selectedTopic}`);
-      if (response.status === 401) {
-        router.push("/");
-        return;
-      }
-      const data = await response.json();
-      setQuestions(data);
+      const responses = await Promise.all(
+        selectedTopics.map((topic) =>
+          fetch(`/api/questions?category=${topic}`).then((res) => res.json())
+        )
+      );
+      const allQuestions = responses
+        .flat()
+        .sort(
+          (a, b) =>
+            new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
+        );
+      setQuestions(allQuestions);
     } catch (error) {
       console.error("Error fetching questions:", error);
       router.push("/");
@@ -51,10 +60,21 @@ export default function QuestionsPage() {
     router.push(`/questions/${questionId}`);
   };
 
+  const handleTopicToggle = (topicId: string) => {
+    setSelectedTopics((prev) => {
+      if (prev.includes(topicId)) {
+        // Don't allow deselecting if it's the last selected topic
+        if (prev.length === 1) return prev;
+        return prev.filter((id) => id !== topicId);
+      }
+      return [...prev, topicId];
+    });
+  };
+
   useEffect(() => {
     fetchQuestions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTopic]);
+  }, [selectedTopics]);
 
   if (loading) {
     return (
@@ -155,39 +175,35 @@ export default function QuestionsPage() {
           </div>
         </header>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8 bg-white/5 p-6 rounded-lg shadow-md">
-          <div className="relative flex-1 w-full">
-            <label htmlFor="topic-select" className="sr-only">
-              Seçili Konu
-            </label>
-            <select
-              id="topic-select"
-              value={selectedTopic}
-              onChange={(e) => setSelectedTopic(e.target.value)}
-              className="w-full min-w-[300px] sm:min-w-[400px] lg:min-w-[500px] px-4 py-3 bg-gray-800 rounded-md text-gray-200 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300"
+        <div className="flex flex-wrap gap-3 mb-8 bg-white/5 p-6 rounded-lg shadow-md">
+          {HISTORY_TOPICS.map((topic) => (
+            <button
+              key={topic.id}
+              onClick={() => handleTopicToggle(topic.id)}
+              className={`px-4 py-2 rounded-md transition-colors duration-200 flex items-center gap-2 ${
+                selectedTopics.includes(topic.id)
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+              }`}
             >
-              {HISTORY_TOPICS.map((topic) => (
-                <option key={topic.id} value={topic.id} className="py-2">
-                  {topic.name}
-                </option>
-              ))}
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </div>
+              <span className="w-4 h-4 border-2 rounded flex items-center justify-center">
+                {selectedTopics.includes(topic.id) && (
+                  <svg
+                    className="w-3 h-3"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </span>
+              {topic.name}
+            </button>
+          ))}
         </div>
 
         <div className="space-y-6">
@@ -204,6 +220,10 @@ export default function QuestionsPage() {
                   {question.question}
                 </h3>
                 <div className="flex items-center gap-4">
+                  <span className="px-8 py-3 bg-gray-700/50 text-gray-200 rounded-lg text-base font-medium border border-gray-600">
+                    {HISTORY_TOPICS.find((t) => t.id === question.category)
+                      ?.name || question.category}
+                  </span>
                   <button
                     onClick={() => handleCheckQuestion(question.id)}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors duration-200 flex items-center gap-2"

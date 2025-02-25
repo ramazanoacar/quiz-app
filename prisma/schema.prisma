@@ -22,6 +22,7 @@ model Question {
   category     String
   checked      Boolean  @default(false)
   updated      Boolean  @default(false)
+  addedAt      DateTime @default(now())
 }
 
 model Information {

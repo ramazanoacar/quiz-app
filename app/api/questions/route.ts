@@ -29,6 +29,9 @@ export async function GET(request: Request) {
         category: category,
         checked: false,
       },
+      orderBy: {
+        addedAt: "desc",
+      },
     });
     return NextResponse.json(questions);
   } catch (error) {
@@ -89,6 +92,7 @@ export async function POST(request: Request) {
         score: 1,
         category: category,
         checked: false,
+        addedAt: new Date(),
       })),
     });
 
