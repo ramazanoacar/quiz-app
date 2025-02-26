@@ -60,25 +60,32 @@ async function questionToBatches(
   return queryResponse.matches.map((match) => match.metadata?.text as string);
 }
 
+type QuestionGeneratorOutput = {
+  question: InformationQuestion;
+  additionalContext: string;
+  information: string;
+};
+
 export async function generateQuestion(
   information: string
-): Promise<z.infer<typeof InformationQuestion>> {
+): Promise<QuestionGeneratorOutput> {
   const printQuestions = process.env.NODE_ENV === "development";
   const question: z.infer<typeof InformationQuestion> = {
     question: "",
     correct_answer: "",
   };
+  let additionalContext: string;
 
   try {
     const contextBatches = await questionToBatches(information, 2);
-    const context = "CONTEXT:\n" + contextBatches.join("\n");
+    additionalContext = "CONTEXT:\n" + contextBatches.join("\n");
 
     const completion = await openai.beta.chat.completions.parse({
       model: "ft:gpt-4o-2024-08-06:umstad::AvydhEM5",
       messages: [
         {
           role: "system",
-          content: SYSTEM_PROMPT + "\n\n" + context,
+          content: SYSTEM_PROMPT + "\n\n" + additionalContext,
         },
         {
           role: "user",
@@ -103,5 +110,9 @@ export async function generateQuestion(
     console.error("Error preparing question:", error);
   }
 
-  return question;
+  return {
+    question: question,
+    additionalContext,
+    information,
+  };
 }

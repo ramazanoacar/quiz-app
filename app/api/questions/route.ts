@@ -54,9 +54,13 @@ export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
   const body = await request.json();
-  const contexts: string[] =
-    body.contexts || [...Array(5).keys()].map((i) => `Bağlam ${i + 1}`);
-
+  const contexts: string[] = body.contexts;
+  if (!contexts) {
+    return NextResponse.json(
+      { error: "Contexts are required" },
+      { status: 400 }
+    );
+  }
   if (!category) {
     return NextResponse.json(
       { error: "Category is required" },
@@ -68,21 +72,21 @@ export async function POST(request: Request) {
     const result = await Promise.all(contexts.map(generateQuestion));
 
     const createdQuestions = await prisma.question.createMany({
-      data: result.map((q, i) => ({
-        context: contexts[Math.floor(i / 2)],
-        information: contexts[Math.floor(i / 2)],
-        question: q.question,
+      data: result.map((q) => ({
+        context: q.additionalContext,
+        information: q.information,
+        question: q.question.question,
         answers: [
-          q.correct_answer,
+          q.question.correct_answer,
           "Option B",
           "Option C",
           "Option D",
           "Option E",
         ],
         correctAnswer: 0,
-        preferredQuestion: q.question,
+        preferredQuestion: q.question.question,
         preferredAnswers: [
-          q.correct_answer,
+          q.question.correct_answer,
           "Option B",
           "Option C",
           "Option D",
