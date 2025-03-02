@@ -79,7 +79,7 @@ export async function generateQuestion(
   try {
     const contextBatches = await questionToBatches(information, 2);
     additionalContext = "CONTEXT:\n" + contextBatches.join("\n");
-
+    console.log(new Date().toISOString());
     const completion = await openai.beta.chat.completions.parse({
       model: "ft:gpt-4o-2024-08-06:umstad::AvydhEM5",
       messages: [
@@ -96,7 +96,7 @@ export async function generateQuestion(
       ],
       response_format: zodResponseFormat(InformationQuestion, "question"),
     });
-
+    console.log(new Date().toISOString());
     const message = completion.choices[0].message;
     const parsed = message.parsed;
 

@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await Promise.all(contexts.map(generateQuestion));
-
+    //todor add here wrong options
     const createdQuestions = await prisma.question.createMany({
       data: result.map((q) => ({
         context: q.additionalContext,
